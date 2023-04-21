@@ -1,0 +1,38 @@
+GET http://localhost:3000/api/hello
+
+###
+
+POST http://localhost:3000/api/chats
+Content-Type: application/json
+
+{
+    "name": "My Chat",
+    "description": "My Chat Desc"
+}
+
+###
+
+POST http://localhost:3000/api/chats
+Content-Type: application/json
+
+{
+    "message": "Hello World"
+}
+
+###
+
+GET http://localhost:3000/api/chats
+
+###
+@chatId = c06f01f3-9c77-44b1-960c-ecd4be415543
+
+GET http://localhost:3000/api/chats/{{chatId}}/messages
+
+###
+
+POST http://localhost:3000/api/chats/{{chatId}}/messages
+Content-Type: application/json
+
+{
+    "message": "Estou testando a api, o que vc acha?"
+}
