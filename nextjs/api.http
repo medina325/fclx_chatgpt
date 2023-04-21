@@ -36,3 +36,7 @@ Content-Type: application/json
 {
     "message": "Estou testando a api, o que vc acha?"
 }
+
+###
+
+GET http://localhost:3000/api/messages/cd6c93c1-b96e-4773-a51c-d39b21815cd7/events
