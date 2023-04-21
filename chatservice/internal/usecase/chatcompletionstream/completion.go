@@ -31,16 +31,16 @@ type ChatCompletionConfigInputDTO struct {
 }
 
 type ChatCompletionInputDTO struct {
-	ChatID      string
-	UserID      string
-	UserMessage string
-	Config      ChatCompletionConfigInputDTO
+	ChatID      string                       `json:"chat_id,omitempty"`
+	UserID      string                       `json:"user_id"`
+	UserMessage string                       `json:"user_message"`
+	Config      ChatCompletionConfigInputDTO `json:"config"`
 }
 
 type ChatCompletionOutputDTO struct {
-	ChatID  string
-	UserID  string
-	Content string
+	ChatID  string `json:"chat_id"`
+	UserID  string `json:"user_id"`
+	Content string `json:"content"`
 }
 
 type ChatCompletionUseCase struct {
@@ -53,6 +53,7 @@ func NewChatCompletionUseCase(chatGateway gateway.ChatGateway, openAiClient *ope
 	return &ChatCompletionUseCase{
 		ChatGateway:  chatGateway,
 		OpenAiClient: openAiClient,
+		Stream:       stream,
 	}
 }
 
