@@ -1,0 +1,23 @@
+version: '3'
+
+services:
+  chatservice:
+    build: .
+    container_name: chatserviceapp
+    volumes:
+      - .:/go/src
+    ports:
+      - "8080:8080"
+      - "50052:50051"
+
+  mysql:
+    image: mysql:8
+    container_name: mysql
+    restart: always
+    environment:
+      MYSQL_ROOT_PASSWORD: root
+      MYSQL_DATABASE: chat
+    ports:
+      - 3306:3306
+    volumes:
+      - ./.docker/mysql:/var/lib/mysql
