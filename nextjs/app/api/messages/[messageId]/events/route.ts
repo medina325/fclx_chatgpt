@@ -126,5 +126,5 @@ function writeStream(writer: WritableStreamDefaultWriter, event: Event, data: an
     writer.write(encoder.encode(`id: ${new Date().getTime()}\n`));
 
     const streamData = typeof data === "string" ? data : JSON.stringify(data);
-    writer.write(encoder.encode(`${streamData}\n\n`));
+    writer.write(encoder.encode(`data: ${streamData}\n\n`));
 }
