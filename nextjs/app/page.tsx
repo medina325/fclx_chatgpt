@@ -6,6 +6,7 @@ import { Chat, Message } from "@prisma/client";
 import { useRouter, useSearchParams } from "next/navigation";
 import { FormEvent, useEffect, useState } from "react";
 import useSWR from "swr";
+import useSWRSubscription from "swr/subscription";
 
 // Criando um tipo que consiste em ser um Chat e um JSON que tem uma
 // chave messages, cujo valor é uma lista de objetos Message do prisma
@@ -18,7 +19,8 @@ export default function Home() {
     const searchParams = useSearchParams();
     const chatIdParam = searchParams.get('id');
 
-    const [chatId, setChatId] = useState(chatIdParam); 
+    const [chatId, setChatId] = useState<string | null>(chatIdParam); 
+    const [messageId, setMessageId] = useState<string | null>(null); 
 
     // data: chats -> é para eu poder dar um alias "chats" para a chave que estou
     // deconstruindo do json retornado
@@ -37,6 +39,48 @@ export default function Home() {
             revalidateOnFocus: false,
         }
     );
+
+    // Websocket para manter conexão com Server Sent Events, independente 
+    // de renderização do componente
+    const {data: messageLoading, error: errorMessageLoading } = 
+        useSWRSubscription(
+            messageId ? `/api/messages/${messageId}/events` : null,
+            (path: string, { next }) => {
+                console.log('init event source');
+                const eventSource = new EventSource(path); // EventSource é nativo do browser
+                eventSource.onmessage = (event) => {
+                    console.log('data: ', event);
+                    const newMessage = JSON.parse(event.data);
+                    next(null, newMessage.content);
+                }
+                eventSource.onerror = (event) => {
+                    console.log('errors: ', event);
+                    // @ts-ignore
+                    next(event.data, null);
+                }
+                // O evento end é um evento customizado, portanto
+                // não há um método específico para ele
+                eventSource.addEventListener('end', (event) => {
+                    console.log('end: ', event);
+                    eventSource.close();
+                    const newMessage = JSON.parse(event.data);
+                    mutateMessages((messages) => [...messages!, newMessage], false);
+                    next(null, null);
+                    // Como estou dentro de uma função, pode ser que o messages
+                    // não seja o mais atualizado. Portanto, usando uma função,
+                    // eu garanto que é o mais recente.
+                    // mutateMessages([...messages!, newMessage], false);
+                });
+
+                // Sim, no final retornamos uma função que fecha o eventSource
+                //  tem algo a ver com garantir que a conexão seja destruída pelo frontend
+                // para evitar memory leak (mantendo a conexão aberta e consumindo recursos)
+                return () => {
+                    console.log('close event source');
+                    eventSource.close();
+                } 
+            }
+        );
 
     // TODO - Não entendi bem como que isso aqui fica vigiando o estado
     useEffect(() => {
@@ -74,12 +118,14 @@ export default function Home() {
             const newChat: ChatWithFirstMessage = await ClientHttp.post('chats', { message });
             mutateChats([newChat, ...chats!], false); // Atualizando lista de chats e renderizando componente
             setChatId(newChat.id);
+            setMessageId(newChat.messages[0].id);
         } else {
             const newMessage: Message = await ClientHttp.post(
                 `chats/${chatId}/messages`,
                 { message }
             );
             mutateMessages([...messages!, newMessage], false); // Atualizando lista de mensages e renderizando componente
+            setMessageId(newMessage.id);
         }
         textArea.value = '';
     }
@@ -98,9 +144,12 @@ export default function Home() {
             </div>
             <div>
                 <ul>
+                    Centro
                     {messages!.map((message, key) => (
                         <li key={key}>{message.content}</li>
                     ))}
+                    {messageLoading && <li>{messageLoading}</li>}
+                    {errorMessageLoading && <li>{errorMessageLoading}</li>}
                 </ul>
                 <form id="form" onSubmit={ onSubmit }>
                     <textarea id="message" placeholder="Digite sua pergunta" className="text-black"></textarea>
