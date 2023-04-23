@@ -1,8 +1,23 @@
 import { prisma } from "@/app/prisma/prisma";
 import { ChatServiceClientFactory } from "@/grpc/chat_service_client";
+import { getToken } from "next-auth/jwt";
 import { NextRequest } from "next/server";
 
 export async function GET(request: NextRequest, { params }: { params: { messageId: string } }) {
+    const token = await getToken({req: request});
+
+    const transformStream = new TransformStream();
+    const writer = transformStream.writable.getWriter();
+
+    if (!token) {
+        setTimeout(async () => {
+            writeStream(writer, "error", "Unauthenticated");
+            await writer.close();
+        }, 100);
+
+        return response(transformStream, 401);
+    }
+
     const message = await prisma.message.findUniqueOrThrow({
         where: {
             id: params.messageId
@@ -12,33 +27,30 @@ export async function GET(request: NextRequest, { params }: { params: { messageI
         }
     });
 
-    const transformStream = new TransformStream();
-    const writer = transformStream.writable.getWriter();
-
-    // if (message.chat.user_id !== token.sub) {
-    //     setTimeout(async () => {
-    //       writeStream(writer, "error", "Not Found");
-    //       await writer.close();
-    //     }, 100);
+    if (message.chat.user_id !== token.sub) {
+        setTimeout(async () => {
+          writeStream(writer, "error", "Not Found");
+          await writer.close();
+        }, 100);
     
-    //     return response(transformStream, 404);
-    // }
+        return response(transformStream, 404);
+    }
     
     if (message.has_answered) {
-    setTimeout(async () => {
-        writeStream(writer, "error", "Message already answered");
-        await writer.close();
-    }, 100);
+        setTimeout(async () => {
+            writeStream(writer, "error", "Message already answered");
+            await writer.close();
+        }, 100);
 
-    return response(transformStream, 403);
+        return response(transformStream, 403);
     }
 
     if (message.is_from_bot) {
-    setTimeout(async () => {
-        writeStream(writer, "error", "Message from bot");
-        await writer.close();
-    }, 100);
-    return response(transformStream, 403);
+        setTimeout(async () => {
+            writeStream(writer, "error", "Message from bot");
+            await writer.close();
+        }, 100);
+        return response(transformStream, 403);
     }
 
     const chatService = ChatServiceClientFactory.create();
