@@ -14,6 +14,8 @@ import Image from "next/image";
 import { UserIcon } from "./components/UserIcon";
 import { marked } from "marked";
 import hljs from "highlight.js";
+import { LogoutIcon } from "./components/LogoutIcon";
+import { signOut } from "next-auth/react";
 
 marked.setOptions({
     highlight: function (code: string, lang: string) {
@@ -215,6 +217,14 @@ export default function Home() {
         textArea.value = '';
     }
 
+    async function logout() {
+        await signOut({ redirect: false });
+        const { url: logoutUrl } = await ClientHttp.get(
+          `logout_url?${new URLSearchParams({ redirect: window.location.origin })}`
+        );
+        window.location.href = logoutUrl;
+      }
+
     return (
         <div className="overflow-hidden w-full h-full flex">
             <div className="bg-gray-900 w-[300px] h-screen p-2 flex flex-col">
@@ -244,10 +254,19 @@ export default function Home() {
                             </button>
                         </li>
                     ))}
+                    <li>
+                        <button
+                            className="flex p-3 mt-1 gap-3 rounded hover:bg-gray-500/10 text-sm text-white"
+                            onClick={() => logout()}
+                        >
+                            <LogoutIcon className="h-5 w-5" />
+                            Log out
+                        </button>
+                    </li>
                 </ul>
             </div>
             <div className="flex-1 flex-col relative">
-                <ul className="h-screen overflow-y-auto bg-gray-800">
+                <ul id="chatting" className="h-screen overflow-y-auto bg-gray-800">
                     {messages?.map((message, key) => (
                         <ChatItem
                             key={key}
